@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Cloudflare Stream Token Generator</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" />
+</head>
+
+<body>
+	<div class="container bg-light border mb-5 p-3">
+		<div>
+			<h1 class="text-center">Cloudflare Stream Token Generator</h1>
+			<div class="lead text-center mb-3">
+				We will not collect any of the information you fill on this page. If you prefer, you can <br>
+				save this page to your local disk and use it on your own computer.
+			</div>
+			<div class="text-center"><a href="https://www.youtube.com/watch?v=UArA6MYJp7o" target="_blank" role="button"><i class="fa-brands fa-youtube fs-1 text-danger"></i></a></div>
+			<form>
+				<div class="mb-3">
+					<label for="email" class="form-label">Account Email<span class="ms-2 fs-5">*</span></label>
+					<input type="email" class="form-control" id="email" aria-describedby="emailHelp" required>
+				</div>
+				<div class="mb-3">
+					<label for="id" class="form-label">Acocunt ID<span class="ms-2 fs-5">*</span></label>
+					<input type="text" class="form-control" id="id" required>
+				</div>
+				<div class="mb-3">
+					<label for="key" class="form-label">Global API Key<span class="ms-2 fs-5">*</span></label>
+					<input type="text" class="form-control" id="key" required>
+				</div>
+				<div class="mb-3">
+					<label for="vid" class="form-label">Video ID<span class="ms-2 fs-5">*</span></label>
+					<input type="text" class="form-control" id="vid" required>
+				</div>
+				<div class="mb-3">
+					<label for="codes" class="form-label">Countries to block<span class="ms-2 fs-5">*</span></label>
+					<input type="text" class="form-control" id="codes" placeholder="US,CA" required>
+					<div id="emailHelp" class="form-text">Separate country codes with comma, lookup country with <a
+							href="https://www.iso.org/obp/ui/en" target="_blank">www.iso.org/obp/ui/en</a>.</div>
+				</div>
+				<div class="mb-3">
+					<label for="exp" class="form-label">Hours to expire (optional)</label>
+					<input type="number" class="form-control" id="exp">
+					<div id="emailHelp" class="form-text">If you don't set an expiration, then the toekn we are
+						going to generate will never expire.</div>
+				</div>
+				<button type="submit" class="btn btn-primary" id="hero">Generate</button>
+				<i class="fa-solid fa-spinner fa-spin fs-3 ms-3 d-none"></i>
+				<div class="alert mt-3 d-none" role="alert" style="overflow-wrap: break-word;"></div>
+			</form>
+		</div>
+	</div>
+	<script type="text/javascript">
+		var email = document.getElementById('email');
+		var id = document.getElementById('id');
+		var key = document.getElementById('key');
+		var vid = document.getElementById('vid');
+		var codes = document.getElementById('codes');
+		var exp = document.getElementById('exp');
+		var btn = document.getElementById('hero');
+		var spinner = document.getElementsByClassName('fa-spinner')[0];
+		btn.addEventListener('click', function(e) {
+			e.preventDefault();	
+			if (!email.value || !id.value || !key.value || !vid.value || !codes.value) {
+				alert("please fill out all of the required fields.");
+				return false
+			};	
+			spinner.classList.remove('d-none');
+			const init = {
+				method: 'POST',
+				headers: {
+					"X-Auth-Email": email.value,
+					"X-Auth-Key": key.value,
+					"content-type": "application/json;charset=UTF-8"
+				},
+				body: JSON.stringify({
+					exp: Math.floor(Date.now() / 1000) + (parseInt(exp.value) * 60 * 60),
+					downloadable: false,
+					accessRules: [{ "type": "ip.geoip.country", "country": Object.values(codes.value.toUpperCase().split(',')), "action": "block" }]
+				})
+			};
+			console.log(init.body);
+			fetch(`https://api.cloudflare.com/client/v4/accounts/${id.value}/stream/${vid.value}/token`, init)
+			.then(res => res.json())
+			.then(data => {
+				spinner.classList.add('d-none');
+				if (data.success) {
+					console.log(data.result.token);
+					document.querySelector('.alert').classList.add('alert-success');
+					document.querySelector('.alert').classList.remove('d-none');
+					document.querySelector('.alert').innerHTML = `<strong>Token:</strong> ${data.result.token}`;
+				} else {
+					spinner.classList.add('d-none');
+					document.querySelector('.alert').classList.add('alert-warning');
+					document.querySelector('.alert').classList.remove('d-none');
+					document.querySelector('.alert').innerHTML = `<strong>Error:</strong> ${data.errors[0].message}`;
+				};
+			})
+			.catch(error => {
+				spinner.classList.add('d-none');
+				document.querySelector('.alert').classList.add('alert-warning');
+				document.querySelector('.alert').classList.remove('d-none');
+				document.querySelector('.alert').innerHTML = `<strong>Error:</strong> ${error.message}`;
+			});
+		});
+
+		
+	</script>
+</body>
+
+</html>
